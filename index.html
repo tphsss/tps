@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>❤</title>
+    <style>
+        body {
+            background-color: #ffdde1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            background-color: white;
+            border: 5px solid pink;
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+        }
+        .cell {
+            border: 1px solid #ddd;
+            position: relative;
+        }
+        .wall {
+            background-color: black;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.pinimg.com/736x/ba/01/6c/ba016c61164e8a8b49647c340e25dfd6.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .heart, .broken-heart {
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .heart {
+            background-image: url('https://i.pinimg.com/736x/5c/ed/b4/5cedb449059e06701a009650f2d9a66c.jpg');
+        }
+        .broken-heart {
+            background-image: url('https://i.pinimg.com/736x/f0/82/6a/f0826af72e4743fc7d823fb48b0bfa8f.jpg');
+        }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .popup img {
+            max-width: 80%;
+            border-radius: 10px;
+        }
+        .popup button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game"></div>
+
+    <div id="win-popup" class="popup">
+        <img src="https://i.pinimg.com/736x/dd/7a/11/dd7a11d730c87b93e4ede00c0f68c2ea.jpg" alt="Сердечко">
+        <button onclick="hidePopup('win-popup')">Ну канешно</button>
+    </div>
+
+    <div id="lose-popup" class="popup">
+        <img src="https://i.pinimg.com/736x/90/ee/5b/90ee5b4d2a0a6e6d476a3d5346a741e5.jpg" alt="Дебіл">
+        <button onclick="hidePopup('lose-popup')">Точно?</button>
+        <audio id="meow-sound" src="D:\сайт\tili-tili-bom-strashnaya-kolybelnaya.mp3"></audio>
+    </div>
+
+    <script>
+        const game = document.getElementById("game");
+        const winPopup = document.getElementById("win-popup");
+        const losePopup = document.getElementById("lose-popup");
+        const meowSound = document.getElementById("meow-sound");
+
+        const cols = 15, rows = 15;
+        
+        let playerPos = { x: Math.floor(cols / 2), y: Math.floor(rows / 2) };
+        const heartPos = { x: 0, y: 0 };
+        const brokenHeartPos = { x: 14, y: 14 };
+
+        const walls = [
+    [1,0], [2,0], [3,0], [4,0], [5,0], [6,0], [8,0], [9,0], [10,0], [11,0], [12,0], [13,0], [14,0],
+    [1,1], [3,1], [5,1], [6,1], [8,1], [10,1], [11,1], [13,1],
+    [1,2], [3,2], [5,2], [6,2], [8,2], [10,2], [11,2], [13,2],
+    [1,3], [2,3], [3,3], [5,3], [6,3], [8,3], [10,3], [11,3], [13,3],
+    [1,4], [5,4], [6,4], [8,4], [10,4], [11,4], [13,4],
+    [1,5], [3,5], [5,5], [6,5], [8,5], [10,5], [11,5], [13,5],
+    [1,6], [3,6], [5,6], [6,6], [8,6], [10,6], [11,6], [13,6],
+    [1,8], [3,8], [5,8], [6,8], [8,8], [10,8], [11,8], [13,8],
+    [1,9], [3,9], [5,9], [6,9], [8,9], [10,9], [11,9], [13,9],
+    [1,10], [5,10], [6,10], [8,10], [10,10], [11,10], [13,10],
+    [1,11], [3,11], [5,11], [6,11], [8,11], [10,11], [11,11], [13,11],
+    [1,12], [3,12], [5,12], [6,12], [8,12], [10,12], [11,12], [13,12],
+    [1,13], [3,13], [5,13], [6,13], [8,13], [10,13], [11,13], [13,13],
+    [1,14], [2,14], [3,14], [4,14], [5,14], [6,14], [8,14], [9,14], [10,14], [11,14], [12,14], [13,14]
+
+];
+
+
+        function createGrid() {
+            game.innerHTML = "";
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const cell = document.createElement("div");
+                    cell.classList.add("cell");
+                    if (walls.some(wall => wall[0] === x && wall[1] === y)) {
+                        cell.classList.add("wall");
+                    }
+                    if (x === playerPos.x && y === playerPos.y) {
+                        const player = document.createElement("div");
+                        player.id = "player";
+                        cell.appendChild(player);
+                    }
+                    if (x === heartPos.x && y === heartPos.y) {
+                        const heart = document.createElement("div");
+                        heart.classList.add("heart");
+                        cell.appendChild(heart);
+                    }
+                    if (x === brokenHeartPos.x && y === brokenHeartPos.y) {
+                        const brokenHeart = document.createElement("div");
+                        brokenHeart.classList.add("broken-heart");
+                        cell.appendChild(brokenHeart);
+                    }
+                    game.appendChild(cell);
+                }
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows &&
+                !walls.some(wall => wall[0] === newX && wall[1] === newY)) {
+                playerPos = { x: newX, y: newY };
+                updateGrid();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            if (playerPos.x === heartPos.x && playerPos.y === heartPos.y) {
+                showPopup('win-popup');
+            } else if (playerPos.x === brokenHeartPos.x && playerPos.y === brokenHeartPos.y) {
+                showPopup('lose-popup');
+                meowSound.play();
+            }
+        }
+
+        function resetGame() {
+            playerPos = { x: Math.floor(cols / 2), y: Math.floor(rows / 2) };
+            updateGrid();
+        }
+
+        function updateGrid() {
+            createGrid();
+        }
+
+        function showPopup(id) {
+            document.getElementById(id).style.display = "flex";
+        }
+
+        function hidePopup(id) {
+            document.getElementById(id).style.display = "none";
+            resetGame();
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() === "w") movePlayer(0, -1);
+            if (e.key.toLowerCase() === "s") movePlayer(0, 1);
+            if (e.key.toLowerCase() === "a") movePlayer(-1, 0);
+            if (e.key.toLowerCase() === "d") movePlayer(1, 0);
+        });
+
+        createGrid();
+    </script>
+
+</body>
+</html>
